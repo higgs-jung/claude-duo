@@ -105,26 +105,45 @@ function init(force = false) {
 
 function start() {
   const server = path.join(__dirname, '..', 'server.js');
-  const port = process.env.PORT || 3333;
+  const preferredPort = process.env.PORT || 3333;
   const cwd = process.cwd();
 
-  console.log(`Starting Claude Code Orchestration on http://localhost:${port}`);
+  console.log(`Starting Claude Code Orchestration...`);
   console.log(`Working directory: ${cwd}`);
 
+  let actualPort = null;
+
   const serverProcess = spawn('node', [server], {
-    stdio: 'inherit',
-    env: { ...process.env, PORT: port, PROJECT_CWD: cwd }
+    stdio: ['inherit', 'pipe', 'pipe'],
+    env: { ...process.env, PORT: preferredPort, PROJECT_CWD: cwd }
+  });
+
+  // Parse stdout for actual port
+  serverProcess.stdout.on('data', (data) => {
+    const output = data.toString();
+    process.stdout.write(output);
+
+    // Extract port from "Server running on http://localhost:XXXX"
+    const portMatch = output.match(/Server running on http:\/\/localhost:(\d+)/);
+    if (portMatch && !actualPort) {
+      actualPort = parseInt(portMatch[1]);
+
+      // Open browser with actual port
+      setTimeout(() => {
+        const url = `http://localhost:${actualPort}`;
+        const startCmd = process.platform === 'darwin' ? 'open' :
+                         process.platform === 'win32' ? 'start' : 'xdg-open';
+        exec(`${startCmd} ${url}`);
+        console.log(`Opening browser at ${url}`);
+      }, 500);
+    }
+  });
+
+  serverProcess.stderr.on('data', (data) => {
+    process.stderr.write(data);
   });
 
   serverProcess.on('exit', (code) => {
     process.exit(code);
   });
-
-  // Open browser after 1 second
-  setTimeout(() => {
-    const url = `http://localhost:${port}`;
-    const start = process.platform === 'darwin' ? 'open' :
-                  process.platform === 'win32' ? 'start' : 'xdg-open';
-    exec(`${start} ${url}`);
-  }, 1000);
 }

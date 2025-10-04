@@ -146,9 +146,23 @@ claude-duo start
 
 기본 포트는 `3333`입니다 (일반적인 개발 서버 포트 3000과의 충돌 방지).
 
-커스텀 포트로 변경:
+**자동 포트 찾기:**
+- 3333 포트가 사용 중이면 자동으로 3334, 3335... 순서로 사용 가능한 포트를 찾습니다 (최대 10번 시도)
+- 실제 사용된 포트는 콘솔에 표시됩니다
+- Hook도 자동으로 실제 포트를 사용합니다
+
+**커스텀 포트로 변경:**
 ```bash
 PORT=8080 claude-duo start
+```
+
+**포트 충돌 해결:**
+```bash
+# 포트 사용 중인 프로세스 확인 (macOS/Linux)
+lsof -i :3333
+
+# 프로세스 종료
+kill -9 <PID>
 ```
 
 ### Hook 설정 커스터마이징
@@ -235,6 +249,36 @@ claude-duo/
 ### 터미널이 다른 디렉토리에서 실행됨
 
 `claude-duo start`를 실행한 디렉토리가 터미널의 작업 디렉토리가 됩니다. 올바른 프로젝트 폴더에서 실행했는지 확인하세요.
+
+## 업데이트
+
+### 글로벌 설치 업데이트
+
+```bash
+# 최신 버전으로 업데이트
+npm install -g claude-duo@latest
+
+# 또는
+npm update -g claude-duo
+
+# 설치된 버전 확인
+npm list -g claude-duo
+```
+
+### 프로젝트 의존성 업데이트
+
+```bash
+# package.json에 명시된 경우
+npm update claude-duo
+
+# 또는 최신 버전 강제 설치
+npm install claude-duo@latest
+```
+
+### 주요 변경사항 확인
+
+- [GitHub Releases](https://github.com/higgs-jung/claude-duo/releases)
+- [CHANGELOG](https://github.com/higgs-jung/claude-duo/blob/main/CHANGELOG.md)
 
 ## 라이선스
 

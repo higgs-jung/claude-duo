@@ -20,6 +20,9 @@ const pidToTerminal = {};
 const terminals = {};
 const terminalWebSockets = {};
 
+// Store actual server port
+let serverPort = null;
+
 // Debounce hook requests to prevent duplicates
 const lastHookTime = {};
 const HOOK_DEBOUNCE_MS = 1000;
@@ -110,7 +113,11 @@ function createTerminal(ws, id) {
     cols: 80,
     rows: 30,
     cwd: cwd,
-    env: { ...process.env, TERMINAL_ID: id }
+    env: {
+      ...process.env,
+      TERMINAL_ID: id,
+      ORCHESTRATION_PORT: serverPort || 3333
+    }
   });
 
   terminals[id] = term;
@@ -134,7 +141,83 @@ function createTerminal(ws, id) {
   console.log(`Created terminal: ${id}`);
 }
 
-const PORT = process.env.PORT || 3333;
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+// Find available port starting from preferred port
+function findAvailablePort(startPort, maxAttempts = 10) {
+  return new Promise((resolve, reject) => {
+    let port = startPort;
+    let attempts = 0;
+
+    const tryPort = () => {
+      if (attempts >= maxAttempts) {
+        reject(new Error(`No available port found after ${maxAttempts} attempts`));
+        return;
+      }
+
+      const testServer = require('net').createServer();
+
+      testServer.once('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+          console.log(`Port ${port} is busy, trying ${port + 1}...`);
+          port++;
+          attempts++;
+          tryPort();
+        } else {
+          reject(err);
+        }
+      });
+
+      testServer.once('listening', () => {
+        testServer.close(() => {
+          resolve(port);
+        });
+      });
+
+      testServer.listen(port);
+    };
+
+    tryPort();
+  });
+}
+
+const preferredPort = parseInt(process.env.PORT) || 3333;
+
+findAvailablePort(preferredPort).then(PORT => {
+  serverPort = PORT; // Store actual port globally
+
+  server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+    if (PORT !== preferredPort) {
+      console.log(`Note: Preferred port ${preferredPort} was busy, using ${PORT} instead`);
+    }
+  });
+
+  // Handle server errors
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(`ERROR: Port ${PORT} is already in use`);
+      process.exit(1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, closing server...');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('\nSIGINT received, closing server...');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+}).catch(err => {
+  console.error('Failed to start server:', err.message);
+  process.exit(1);
 });
