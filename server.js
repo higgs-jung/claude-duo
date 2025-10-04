@@ -13,9 +13,6 @@ const wss = new WebSocket.Server({ server });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Map PID to terminal ID
-const pidToTerminal = {};
-
 // Store terminal instances
 const terminals = {};
 const terminalWebSockets = {};
@@ -60,9 +57,9 @@ app.post('/hook', (req, res) => {
 });
 
 wss.on('connection', (ws) => {
-  console.log('Client connected');
   const clientId = Math.random().toString(36).substring(7);
   terminalWebSockets[clientId] = ws;
+  console.log(`Client connected: ${clientId} (total: ${Object.keys(terminalWebSockets).length})`);
 
   ws.on('message', (message) => {
     const data = JSON.parse(message);
@@ -92,15 +89,20 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    console.log('Client disconnected');
     delete terminalWebSockets[clientId];
-    // Clean up terminals
-    Object.keys(terminals).forEach(id => {
-      if (terminals[id]) {
-        terminals[id].kill();
-        delete terminals[id];
-      }
-    });
+    const remainingClients = Object.keys(terminalWebSockets).length;
+    console.log(`Client disconnected: ${clientId} (remaining: ${remainingClients})`);
+
+    // Only kill terminals when last client disconnects
+    if (remainingClients === 0) {
+      console.log('Last client disconnected, cleaning up terminals...');
+      Object.keys(terminals).forEach(id => {
+        if (terminals[id]) {
+          terminals[id].kill();
+          delete terminals[id];
+        }
+      });
+    }
   });
 });
 

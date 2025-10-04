@@ -1,4 +1,6 @@
-const ws = new WebSocket(`ws://${window.location.host}`);
+// Use wss:// if page is served over https://
+const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const ws = new WebSocket(`${wsProtocol}//${window.location.host}`);
 
 const terminals = {
   a: null,
@@ -18,6 +20,12 @@ const buffers = {
 let autoPipeline = false;
 let lastCompleted = null;
 let wsReady = false;
+
+// Anti-loop protection
+let conversationTurns = 0;
+const MAX_TURNS = 10; // Maximum back-and-forth exchanges
+let lastSendTime = 0;
+const MIN_COOLDOWN = 3000; // 3 seconds minimum between sends
 
 // Initialize terminals
 function initTerminal(id, elementId) {
@@ -90,14 +98,37 @@ ws.onmessage = (event) => {
         console.log(`[Hook] Stop detected in ${data.id}`);
         const sourceId = data.id;
 
+        // Check turn limit
+        if (conversationTurns >= MAX_TURNS) {
+          console.log(`[Loop Prevention] Max turns (${MAX_TURNS}) reached. Auto-pipeline paused.`);
+          console.log('Refresh page or manually send messages to continue.');
+          autoPipeline = false;
+          return;
+        }
+
+        // Check cooldown
+        const now = Date.now();
+        const timeSinceLastSend = now - lastSendTime;
+        if (timeSinceLastSend < MIN_COOLDOWN) {
+          console.log(`[Cooldown] Waiting ${MIN_COOLDOWN - timeSinceLastSend}ms before next send...`);
+          setTimeout(() => {
+            // Re-trigger completion check after cooldown
+            ws.send = ws.send; // Dummy to avoid closure issues
+            wss.on('message', ws.onmessage); // Re-check
+          }, MIN_COOLDOWN - timeSinceLastSend);
+          return;
+        }
+
         // Wait longer for buffer to complete, then retry if needed
         const attemptSend = (attempt = 1, maxAttempts = 3) => {
           const output = extractLastOutput(buffers[sourceId]);
           const targetId = sourceId === 'a' ? 'b' : 'a';
 
           if (output && output.length > 15) {
-            console.log(`[Attempt ${attempt}] Sending from ${sourceId} → ${targetId}:`, output.substring(0, 100));
+            console.log(`[Attempt ${attempt}] Sending from ${sourceId} → ${targetId} (turn ${conversationTurns + 1}/${MAX_TURNS}):`, output.substring(0, 100));
             lastCompleted = sourceId;
+            conversationTurns++;
+            lastSendTime = Date.now();
             typeMessageToTerminal(targetId, output);
           } else if (attempt < maxAttempts) {
             console.log(`[Attempt ${attempt}] Output too short (${output.length} chars), retrying...`);
