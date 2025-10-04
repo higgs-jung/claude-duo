@@ -214,10 +214,10 @@ function typeMessageToTerminal(targetId, message) {
         ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\r' }));
         setTimeout(() => {
           ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\n' }));
-        }, 100);
-      }, 100);
+        }, 50);
+      }, 50);
     }
-  }, 10); // 10ms between each character
+  }, 1); // 1ms between each character
 }
 
 // Handle window resize

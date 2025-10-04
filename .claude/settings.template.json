@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -X POST http://localhost:3000/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+            "command": "curl -X POST http://localhost:3333/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
           }
         ]
       }

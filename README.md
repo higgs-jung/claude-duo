@@ -70,10 +70,10 @@ npx claude-duo start
 
 ### `claude-duo init`
 
-현재 디렉토리에 `.claude/` 설정 파일을 생성합니다:
+현재 디렉토리에 설정 파일을 생성합니다:
 
 - `.claude/settings.local.json` - Hook 설정 (자동 완료 감지)
-- `.claude/claude.md` - 협업 모드 컨텍스트
+- `CLAUDE.md` - 협업 모드 컨텍스트 (프로젝트 루트)
 
 ```bash
 claude-duo init
@@ -95,14 +95,14 @@ PORT=8080 claude-duo start
 ```
 your-project/
 ├── .claude/
-│   ├── settings.local.json  # Hook 설정 (claude-duo init으로 생성)
-│   └── claude.md            # 협업 컨텍스트 (claude-duo init으로 생성)
+│   └── settings.local.json  # Hook 설정 (claude-duo init으로 생성)
+├── CLAUDE.md                # 협업 컨텍스트 (claude-duo init으로 생성)
 └── ... (your project files)
 ```
 
-## .claude.md의 역할
+## CLAUDE.md의 역할
 
-`claude-duo init`으로 생성되는 `.claude/claude.md` 파일은 Claude Code가 시작될 때 자동으로 읽는 시스템 프롬프트입니다. 이 파일은:
+`claude-duo init`으로 생성되는 `CLAUDE.md` 파일은 Claude Code가 시작될 때 자동으로 읽는 시스템 프롬프트입니다. 이 파일은:
 
 - 다른 Claude 인스턴스와 협업 중임을 알립니다
 - 간결하고 명확한 응답을 권장합니다
@@ -142,8 +142,11 @@ claude-duo start
 
 ## 설정
 
-### 포트 변경
+### 포트 설정
 
+기본 포트는 `3333`입니다 (일반적인 개발 서버 포트 3000과의 충돌 방지).
+
+커스텀 포트로 변경:
 ```bash
 PORT=8080 claude-duo start
 ```
@@ -164,7 +167,7 @@ PORT=8080 claude-duo start
         "hooks": [
           {
             "type": "command",
-            "command": "curl -X POST http://localhost:3000/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+            "command": "curl -X POST http://localhost:3333/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
           }
         ]
       }
@@ -197,7 +200,7 @@ npm start
 ### 프로젝트 구조
 
 ```
-orchestration/
+claude-duo/
 ├── bin/
 │   └── cli.js              # CLI 진입점 (init, start)
 ├── public/
@@ -205,7 +208,7 @@ orchestration/
 │   └── client.js           # WebSocket 클라이언트 + 자동 파이프라인
 ├── .claude/
 │   └── settings.template.json   # Hook 설정 템플릿
-├── claude.md               # 협업 컨텍스트 (init 시 복사됨)
+├── CLAUDE.md               # 협업 컨텍스트 (init 시 복사됨)
 ├── server.js               # Express + WebSocket 서버
 └── package.json
 ```

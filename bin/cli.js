@@ -12,9 +12,9 @@ if (command === 'init') {
   start();
 } else {
   console.log('Usage:');
-  console.log('  orchestration init          - Initialize .claude/ configuration in current directory');
-  console.log('  orchestration init --force  - Force overwrite existing configuration');
-  console.log('  orchestration start         - Start orchestration server');
+  console.log('  claude-duo init          - Initialize .claude/ configuration in current directory');
+  console.log('  claude-duo init --force  - Force overwrite existing configuration');
+  console.log('  claude-duo start         - Start orchestration server');
   process.exit(1);
 }
 
@@ -62,15 +62,15 @@ function init(force = false) {
     console.log('✓ Created .claude/settings.local.json');
   }
 
-  // Handle claude.md
-  const claudeMdSource = path.join(__dirname, '..', 'claude.md');
-  const claudeMdTarget = path.join(claudeDir, 'claude.md');
+  // Handle CLAUDE.md (project root, not .claude directory)
+  const claudeMdSource = path.join(__dirname, '..', 'CLAUDE.md');
+  const claudeMdTarget = path.join(cwd, 'CLAUDE.md');
 
   if (fs.existsSync(claudeMdTarget)) {
     if (force) {
       // Force overwrite
       fs.copyFileSync(claudeMdSource, claudeMdTarget);
-      console.log('✓ Updated .claude/claude.md (force overwrite)');
+      console.log('✓ Updated CLAUDE.md (force overwrite)');
     } else {
       // Smart merge: prepend if not already present
       try {
@@ -79,33 +79,33 @@ function init(force = false) {
 
         // Check if already has orchestration content
         if (existing.includes('Claude Code Orchestration Mode')) {
-          console.log('⚠ .claude/claude.md already has orchestration content, skipping...');
+          console.log('⚠ CLAUDE.md already has orchestration content, skipping...');
         } else {
           // Prepend orchestration content
           const updated = orchestrationContent + '\n\n---\n\n' + existing;
           fs.writeFileSync(claudeMdTarget, updated);
-          console.log('✓ Updated .claude/claude.md (prepended orchestration context)');
+          console.log('✓ Updated CLAUDE.md (prepended orchestration context)');
         }
       } catch (err) {
-        console.log(`⚠ Could not update claude.md: ${err.message}`);
+        console.log(`⚠ Could not update CLAUDE.md: ${err.message}`);
         console.log('  Use --force to overwrite');
       }
     }
   } else {
     // Create new file
     fs.copyFileSync(claudeMdSource, claudeMdTarget);
-    console.log('✓ Created .claude/claude.md');
+    console.log('✓ Created CLAUDE.md');
   }
 
   console.log('\n✅ Initialization complete!');
   console.log('\nNext steps:');
   console.log('1. Review .claude/settings.local.json and adjust if needed');
-  console.log('2. Run: orchestration start');
+  console.log('2. Run: claude-duo start');
 }
 
 function start() {
   const server = path.join(__dirname, '..', 'server.js');
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 3333;
   const cwd = process.cwd();
 
   console.log(`Starting Claude Code Orchestration on http://localhost:${port}`);
