@@ -21,11 +21,41 @@ let autoPipeline = false;
 let lastCompleted = null;
 let wsReady = false;
 
-// Anti-loop protection
+// Anti-loop protection (configurable via UI)
 let conversationTurns = 0;
-const MAX_TURNS = 10; // Maximum back-and-forth exchanges
 let lastSendTime = 0;
-const MIN_COOLDOWN = 3000; // 3 seconds minimum between sends
+
+// UI Controls
+const turnLimitCheckbox = document.getElementById('turnLimitEnabled');
+const maxTurnsInput = document.getElementById('maxTurns');
+const cooldownInput = document.getElementById('cooldownMs');
+const turnCounterDisplay = document.getElementById('turnCounter');
+
+// Update turn counter display
+function updateTurnCounter() {
+  const maxTurns = parseInt(maxTurnsInput.value) || 10;
+  const percentage = (conversationTurns / maxTurns) * 100;
+
+  turnCounterDisplay.textContent = `${conversationTurns} / ${maxTurns} turns`;
+  turnCounterDisplay.className = 'turn-counter';
+
+  if (percentage >= 80) {
+    turnCounterDisplay.classList.add('danger');
+  } else if (percentage >= 60) {
+    turnCounterDisplay.classList.add('warning');
+  }
+}
+
+// Enable/disable max turns input based on checkbox
+turnLimitCheckbox.addEventListener('change', () => {
+  maxTurnsInput.disabled = !turnLimitCheckbox.checked;
+  if (!turnLimitCheckbox.checked) {
+    autoPipeline = true; // Re-enable if it was disabled
+  }
+});
+
+// Update display when max turns changes
+maxTurnsInput.addEventListener('input', updateTurnCounter);
 
 // Initialize terminals
 function initTerminal(id, elementId) {
@@ -93,54 +123,51 @@ ws.onmessage = (event) => {
       }
       break;
     case 'completion':
-      // Hook-based completion detection
-      if (autoPipeline && lastCompleted !== data.id) {
-        console.log(`[Hook] Stop detected in ${data.id}`);
-        const sourceId = data.id;
+      // Hook-based completion detection with cooldown + turn limit
+      if (!(autoPipeline && lastCompleted !== data.id)) break;
+      console.log(`[Hook] Stop detected in ${data.id}`);
+      const sourceId = data.id;
+      const targetId = sourceId === 'a' ? 'b' : 'a';
 
-        // Check turn limit
-        if (conversationTurns >= MAX_TURNS) {
-          console.log(`[Loop Prevention] Max turns (${MAX_TURNS}) reached. Auto-pipeline paused.`);
-          console.log('Refresh page or manually send messages to continue.');
-          autoPipeline = false;
-          return;
-        }
+      // Get current settings from UI
+      const turnLimitEnabled = turnLimitCheckbox.checked;
+      const maxTurns = parseInt(maxTurnsInput.value) || 10;
+      const minCooldown = parseInt(cooldownInput.value) || 3000;
 
-        // Check cooldown
-        const now = Date.now();
-        const timeSinceLastSend = now - lastSendTime;
-        if (timeSinceLastSend < MIN_COOLDOWN) {
-          console.log(`[Cooldown] Waiting ${MIN_COOLDOWN - timeSinceLastSend}ms before next send...`);
-          setTimeout(() => {
-            // Re-trigger completion check after cooldown
-            ws.send = ws.send; // Dummy to avoid closure issues
-            wss.on('message', ws.onmessage); // Re-check
-          }, MIN_COOLDOWN - timeSinceLastSend);
-          return;
-        }
-
-        // Wait longer for buffer to complete, then retry if needed
-        const attemptSend = (attempt = 1, maxAttempts = 3) => {
-          const output = extractLastOutput(buffers[sourceId]);
-          const targetId = sourceId === 'a' ? 'b' : 'a';
-
-          if (output && output.length > 15) {
-            console.log(`[Attempt ${attempt}] Sending from ${sourceId} → ${targetId} (turn ${conversationTurns + 1}/${MAX_TURNS}):`, output.substring(0, 100));
-            lastCompleted = sourceId;
-            conversationTurns++;
-            lastSendTime = Date.now();
-            typeMessageToTerminal(targetId, output);
-          } else if (attempt < maxAttempts) {
-            console.log(`[Attempt ${attempt}] Output too short (${output.length} chars), retrying...`);
-            setTimeout(() => attemptSend(attempt + 1, maxAttempts), 1000);
-          } else {
-            console.log(`[Failed] No valid message after ${maxAttempts} attempts`);
-            lastCompleted = sourceId;
-          }
-        };
-
-        setTimeout(() => attemptSend(), 2000);
+      // Check turn limit (if enabled)
+      if (turnLimitEnabled && conversationTurns >= maxTurns) {
+        console.log(`[Loop Prevention] Max turns (${maxTurns}) reached. Auto-pipeline paused.`);
+        console.log('Uncheck "Turn Limit" or increase max turns to continue.');
+        autoPipeline = false;
+        break;
       }
+
+      // Wait for buffer to settle and respect cooldown window
+      const now = Date.now();
+      const timeSinceLastSend = now - lastSendTime;
+      const initialDelay = Math.max(2000, minCooldown - Math.max(0, timeSinceLastSend));
+
+      const attemptSend = (attempt = 1, maxAttempts = 3) => {
+        const output = extractLastOutput(buffers[sourceId]);
+
+        if (output && output.length > 15) {
+          const turnInfo = turnLimitEnabled ? ` (turn ${conversationTurns + 1}/${maxTurns})` : '';
+          console.log(`[Attempt ${attempt}] ${sourceId} → ${targetId}${turnInfo}:`, output.substring(0, 100));
+          lastCompleted = sourceId;
+          conversationTurns++;
+          lastSendTime = Date.now();
+          updateTurnCounter();
+          typeMessageToTerminal(targetId, output);
+        } else if (attempt < maxAttempts) {
+          console.log(`[Attempt ${attempt}] Output too short (${output.length} chars), retrying...`);
+          setTimeout(() => attemptSend(attempt + 1, maxAttempts), 1000);
+        } else {
+          console.log(`[Failed] No valid message after ${maxAttempts} attempts`);
+          lastCompleted = sourceId;
+        }
+      };
+
+      setTimeout(() => attemptSend(), initialDelay);
       break;
     case 'exit':
       const statusId = data.id === 'a' ? 'status-a' : 'status-b';
@@ -172,6 +199,10 @@ ws.onopen = () => {
   console.log('WebSocket connected, auto-starting terminals...');
   wsReady = true;
   autoPipeline = true; // Enable auto-pipeline by default
+  // Reset counters on refresh
+  conversationTurns = 0;
+  lastSendTime = 0;
+  updateTurnCounter();
   startTerminals();
 };
 

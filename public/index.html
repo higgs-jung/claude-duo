@@ -20,6 +20,62 @@
       flex-direction: column;
     }
 
+    .controls {
+      background: #2d2d30;
+      border-bottom: 1px solid #3e3e3e;
+      padding: 8px 16px;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-group label {
+      color: #ccc;
+      font-size: 12px;
+    }
+
+    .control-group input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .control-group input[type="number"] {
+      width: 60px;
+      padding: 4px 8px;
+      background: #3c3c3c;
+      border: 1px solid #555;
+      border-radius: 3px;
+      color: #fff;
+      font-size: 12px;
+    }
+
+    .control-group input[type="number"]:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .turn-counter {
+      color: #4ec9b0;
+      font-weight: 500;
+      margin-left: auto;
+    }
+
+    .turn-counter.warning {
+      color: #ce9178;
+    }
+
+    .turn-counter.danger {
+      color: #f48771;
+    }
+
     .container {
       display: flex;
       flex: 1;
@@ -73,6 +129,22 @@
   </style>
 </head>
 <body>
+  <div class="controls">
+    <div class="control-group">
+      <input type="checkbox" id="turnLimitEnabled" checked>
+      <label for="turnLimitEnabled">Turn Limit</label>
+    </div>
+    <div class="control-group">
+      <label for="maxTurns">Max Turns:</label>
+      <input type="number" id="maxTurns" value="10" min="1" max="100">
+    </div>
+    <div class="control-group">
+      <label for="cooldownMs">Cooldown (ms):</label>
+      <input type="number" id="cooldownMs" value="3000" min="0" max="10000" step="100">
+    </div>
+    <div class="turn-counter" id="turnCounter">0 / 10 turns</div>
+  </div>
+
   <div class="container">
     <div class="terminal-wrapper">
       <div class="terminal-header">

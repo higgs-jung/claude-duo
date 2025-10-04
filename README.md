@@ -10,6 +10,7 @@
 - ✅ 실시간 WebSocket 통신
 - ✅ 협업 모드 컨텍스트 자동 주입
 - ✅ 프로젝트별 설정 관리
+- ✅ UI에서 턴 제한/쿨다운 조정 가능
 
 ## 빠른 시작
 
@@ -142,6 +143,28 @@ claude-duo start
 
 ## 설정
 
+### UI 컨트롤 (브라우저 상단)
+
+웹 UI 상단에서 실시간으로 동작을 조정할 수 있습니다:
+
+**Turn Limit (턴 제한)**
+- 체크박스를 해제하면 무제한 교환 가능
+- 켜면 Max Turns 값까지만 자동 교환
+
+**Max Turns (최대 턴 수)**
+- 1-100 사이 값 입력 (기본값: 10)
+- A→B→A→B... 형태로 몇 번까지 주고받을지 제한
+- 현재 턴 수가 60% 넘으면 주황색, 80% 넘으면 빨간색 표시
+
+**Cooldown (쿨다운)**
+- 메시지 간 최소 대기 시간 (ms 단위, 기본값: 3000)
+- 0-10000ms 사이 값 입력
+- 너무 빠른 연속 전송 방지
+
+**Turn Counter (턴 카운터)**
+- 현재 진행된 턴 수 / 최대 턴 수 표시
+- 색상으로 진행률 시각화 (초록→주황→빨강)
+
 ### 포트 설정
 
 기본 포트는 `3333`입니다 (일반적인 개발 서버 포트 3000과의 충돌 방지).
@@ -181,7 +204,7 @@ kill -9 <PID>
         "hooks": [
           {
             "type": "command",
-            "command": "curl -X POST http://localhost:3333/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+            "command": "HOOK_PORT=${ORCHESTRATION_PORT:-3333} && curl -X POST http://localhost:$HOOK_PORT/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
           }
         ]
       }
@@ -210,6 +233,11 @@ cd claude-duo
 npm install
 npm start
 ```
+
+### 보안/배포 참고
+
+- HTTPS로 페이지가 제공될 때 WebSocket은 자동으로 `wss://`를 사용합니다.
+- 포트는 3333부터 자동으로 가용 포트를 탐색하며, 훅은 실제 사용 포트를(`ORCHESTRATION_PORT`) 따라갑니다.
 
 ### 프로젝트 구조
 
