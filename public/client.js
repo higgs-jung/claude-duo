@@ -90,19 +90,25 @@ ws.onmessage = (event) => {
         console.log(`[Hook] Stop detected in ${data.id}`);
         const sourceId = data.id;
 
-        setTimeout(() => {
+        // Wait longer for buffer to complete, then retry if needed
+        const attemptSend = (attempt = 1, maxAttempts = 3) => {
           const output = extractLastOutput(buffers[sourceId]);
           const targetId = sourceId === 'a' ? 'b' : 'a';
 
-          if (output && output.length > 10) {
-            console.log(`Sending from ${sourceId} → ${targetId}:`, output.substring(0, 100));
+          if (output && output.length > 15) {
+            console.log(`[Attempt ${attempt}] Sending from ${sourceId} → ${targetId}:`, output.substring(0, 100));
             lastCompleted = sourceId;
             typeMessageToTerminal(targetId, output);
+          } else if (attempt < maxAttempts) {
+            console.log(`[Attempt ${attempt}] Output too short (${output.length} chars), retrying...`);
+            setTimeout(() => attemptSend(attempt + 1, maxAttempts), 1000);
           } else {
-            console.log('[Hook] No message to send');
+            console.log(`[Failed] No valid message after ${maxAttempts} attempts`);
             lastCompleted = sourceId;
           }
-        }, 1500);
+        };
+
+        setTimeout(() => attemptSend(), 2000);
       }
       break;
     case 'exit':
@@ -138,15 +144,16 @@ ws.onopen = () => {
   startTerminals();
 };
 
-// Remove ANSI escape codes
+// Remove ANSI escape codes (improved)
 function stripAnsi(str) {
   return str.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')  // CSI sequences
-            .replace(/\x1b\][0-9;]*\x07/g, '')      // OSC sequences
-            .replace(/\x1b[>=]/g, '')                // Other escapes
-            .replace(/\x1b\?[0-9;]+[hl]/g, '')      // DEC private modes
-            .replace(/\[[0-9;?]+[hl]/g, '')         // Leftover bracket sequences
-            .replace(/\r/g, '')                      // Carriage returns
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, '');  // All control characters
+            .replace(/\x1b\][^\x07]*\x07/g, '')      // OSC sequences (more robust)
+            .replace(/\x1b[>=()]/g, '')               // Other escapes
+            .replace(/\x1b\?[0-9;]+[hl]/g, '')       // DEC private modes
+            .replace(/\[[0-9;?]+[hl]/g, '')          // Leftover bracket sequences
+            .replace(/\x1b_[^\x1b]*\x1b\\/g, '')     // Application Program Command
+            .replace(/\r/g, '')                       // Carriage returns
+            .replace(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/g, '');  // Control chars (keep \n)
 }
 
 // Extract last meaningful output
@@ -202,19 +209,34 @@ function extractLastOutput(buffer) {
 function typeMessageToTerminal(targetId, message) {
   console.log(`Typing to ${targetId}:`, message.substring(0, 100) + '...');
 
+  if (!wsReady || !ws || ws.readyState !== WebSocket.OPEN) {
+    console.error('[Error] WebSocket not ready, cannot send message');
+    return;
+  }
+
   let charIndex = 0;
   const typeInterval = setInterval(() => {
     if (charIndex < message.length) {
-      ws.send(JSON.stringify({ type: 'input', id: targetId, data: message[charIndex] }));
-      charIndex++;
+      try {
+        ws.send(JSON.stringify({ type: 'input', id: targetId, data: message[charIndex] }));
+        charIndex++;
+      } catch (err) {
+        console.error('[Error] Failed to send character:', err);
+        clearInterval(typeInterval);
+      }
     } else {
       clearInterval(typeInterval);
       // Submit the message
       setTimeout(() => {
-        ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\r' }));
-        setTimeout(() => {
-          ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\n' }));
-        }, 50);
+        try {
+          ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\r' }));
+          setTimeout(() => {
+            ws.send(JSON.stringify({ type: 'input', id: targetId, data: '\n' }));
+            console.log(`[Success] Message sent to ${targetId}`);
+          }, 50);
+        } catch (err) {
+          console.error('[Error] Failed to submit message:', err);
+        }
       }, 50);
     }
   }, 1); // 1ms between each character

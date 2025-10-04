@@ -20,18 +20,36 @@ const pidToTerminal = {};
 const terminals = {};
 const terminalWebSockets = {};
 
+// Debounce hook requests to prevent duplicates
+const lastHookTime = {};
+const HOOK_DEBOUNCE_MS = 1000;
+
 // Hook endpoint
 app.post('/hook', (req, res) => {
   const { type, pid, terminal_id } = req.body;
   console.log('Hook received:', { type, pid, terminal_id });
 
   if (type === 'stop' && terminal_id) {
+    const now = Date.now();
+    const lastTime = lastHookTime[terminal_id] || 0;
+
+    // Debounce: ignore if hook fired too recently
+    if (now - lastTime < HOOK_DEBOUNCE_MS) {
+      console.log(`[Debounced] Ignoring duplicate hook for ${terminal_id}`);
+      res.json({ ok: true, debounced: true });
+      return;
+    }
+
+    lastHookTime[terminal_id] = now;
+
     // Notify connected clients
     Object.values(terminalWebSockets).forEach(ws => {
-      ws.send(JSON.stringify({
-        type: 'completion',
-        id: terminal_id
-      }));
+      if (ws.readyState === 1) { // WebSocket.OPEN
+        ws.send(JSON.stringify({
+          type: 'completion',
+          id: terminal_id
+        }));
+      }
     });
   }
 
