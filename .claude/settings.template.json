@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -X POST http://localhost:3000/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+          }
+        ]
+      }
+    ]
+  }
+}

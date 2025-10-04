@@ -1,0 +1,44 @@
+{
+  "name": "claude-duo",
+  "version": "1.0.1",
+  "description": "Dual Claude Code terminal orchestration tool for collaborative AI development",
+  "main": "server.js",
+  "bin": {
+    "claude-duo": "./bin/cli.js"
+  },
+  "scripts": {
+    "start": "node bin/cli.js start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "files": [
+    "bin/",
+    "public/",
+    "server.js",
+    ".claude/settings.template.json",
+    "claude.md",
+    "README.md"
+  ],
+  "keywords": [
+    "claude",
+    "claude-code",
+    "ai",
+    "terminal",
+    "orchestration",
+    "collaboration",
+    "xterm"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0",
+    "node-pty": "^1.0.0",
+    "ws": "^8.18.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/higgs-jung/claude-duo.git"
+  }
+}
