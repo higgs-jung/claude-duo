@@ -1,6 +1,6 @@
 {
   "name": "claude-duo",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Dual Claude Code terminal orchestration tool for collaborative AI development",
   "main": "server.js",
   "bin": {

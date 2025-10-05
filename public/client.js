@@ -25,14 +25,16 @@ let wsReady = false;
 let conversationTurns = 0;
 let lastSendTime = 0;
 
-// UI Controls
-const turnLimitCheckbox = document.getElementById('turnLimitEnabled');
-const maxTurnsInput = document.getElementById('maxTurns');
-const cooldownInput = document.getElementById('cooldownMs');
-const turnCounterDisplay = document.getElementById('turnCounter');
+// UI Controls - will be initialized after DOM loads
+let turnLimitCheckbox, maxTurnsInput, cooldownInput, turnCounterDisplay;
 
 // Update turn counter display
 function updateTurnCounter() {
+  if (!turnCounterDisplay || !maxTurnsInput) {
+    console.warn('[UI] Turn counter elements not ready');
+    return;
+  }
+
   const maxTurns = parseInt(maxTurnsInput.value) || 10;
   const percentage = (conversationTurns / maxTurns) * 100;
 
@@ -44,18 +46,45 @@ function updateTurnCounter() {
   } else if (percentage >= 60) {
     turnCounterDisplay.classList.add('warning');
   }
+
+  console.log(`[UI] Turn counter updated: ${conversationTurns} / ${maxTurns}`);
 }
 
-// Enable/disable max turns input based on checkbox
-turnLimitCheckbox.addEventListener('change', () => {
-  maxTurnsInput.disabled = !turnLimitCheckbox.checked;
-  if (!turnLimitCheckbox.checked) {
-    autoPipeline = true; // Re-enable if it was disabled
-  }
-});
+// Initialize UI controls when DOM is ready
+function initializeUI() {
+  turnLimitCheckbox = document.getElementById('turnLimitEnabled');
+  maxTurnsInput = document.getElementById('maxTurns');
+  cooldownInput = document.getElementById('cooldownMs');
+  turnCounterDisplay = document.getElementById('turnCounter');
 
-// Update display when max turns changes
-maxTurnsInput.addEventListener('input', updateTurnCounter);
+  if (!turnLimitCheckbox || !maxTurnsInput || !cooldownInput || !turnCounterDisplay) {
+    console.error('[UI] Failed to find control elements');
+    return;
+  }
+
+  // Enable/disable max turns input based on checkbox
+  turnLimitCheckbox.addEventListener('change', () => {
+    maxTurnsInput.disabled = !turnLimitCheckbox.checked;
+    if (!turnLimitCheckbox.checked) {
+      autoPipeline = true; // Re-enable if it was disabled
+      console.log('[UI] Turn limit disabled, auto-pipeline re-enabled');
+    }
+  });
+
+  // Update display when max turns changes
+  maxTurnsInput.addEventListener('input', updateTurnCounter);
+
+  // Initial display
+  updateTurnCounter();
+  console.log('[UI] Controls initialized');
+}
+
+// Initialize UI when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeUI);
+} else {
+  initializeUI();
+}
 
 // Initialize terminals
 function initTerminal(id, elementId) {
@@ -129,10 +158,10 @@ ws.onmessage = (event) => {
       const sourceId = data.id;
       const targetId = sourceId === 'a' ? 'b' : 'a';
 
-      // Get current settings from UI
-      const turnLimitEnabled = turnLimitCheckbox.checked;
-      const maxTurns = parseInt(maxTurnsInput.value) || 10;
-      const minCooldown = parseInt(cooldownInput.value) || 3000;
+      // Get current settings from UI (with defaults if UI not ready)
+      const turnLimitEnabled = turnLimitCheckbox ? turnLimitCheckbox.checked : true;
+      const maxTurns = maxTurnsInput ? parseInt(maxTurnsInput.value) : 10;
+      const minCooldown = cooldownInput ? parseInt(cooldownInput.value) : 3000;
 
       // Check turn limit (if enabled)
       if (turnLimitEnabled && conversationTurns >= maxTurns) {
@@ -148,7 +177,9 @@ ws.onmessage = (event) => {
       const initialDelay = Math.max(2000, minCooldown - Math.max(0, timeSinceLastSend));
 
       const attemptSend = (attempt = 1, maxAttempts = 3) => {
+        console.log(`[DEBUG] Buffer size for ${sourceId}:`, buffers[sourceId].length);
         const output = extractLastOutput(buffers[sourceId]);
+        console.log(`[DEBUG] Extracted output length: ${output.length}, content:`, output.substring(0, 200));
 
         if (output && output.length > 15) {
           const turnInfo = turnLimitEnabled ? ` (turn ${conversationTurns + 1}/${maxTurns})` : '';
@@ -160,9 +191,12 @@ ws.onmessage = (event) => {
           typeMessageToTerminal(targetId, output);
         } else if (attempt < maxAttempts) {
           console.log(`[Attempt ${attempt}] Output too short (${output.length} chars), retrying...`);
+          console.log(`[DEBUG] Current output:`, JSON.stringify(output));
           setTimeout(() => attemptSend(attempt + 1, maxAttempts), 1000);
         } else {
           console.log(`[Failed] No valid message after ${maxAttempts} attempts`);
+          console.log(`[DEBUG] Final output was:`, JSON.stringify(output));
+          console.log(`[DEBUG] Last 500 chars of buffer:`, buffers[sourceId].join('').slice(-500));
           lastCompleted = sourceId;
         }
       };
