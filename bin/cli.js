@@ -105,7 +105,7 @@ function init(force = false) {
 
 function start() {
   const server = path.join(__dirname, '..', 'server.js');
-  const preferredPort = process.env.PORT || 3333;
+  const preferredPort = process.env.PORT || 53333;
   const cwd = process.cwd();
 
   console.log(`Starting Claude Code Orchestration...`);

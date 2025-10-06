@@ -167,10 +167,15 @@ claude-duo start
 
 ### 포트 설정
 
-기본 포트는 `3333`입니다 (일반적인 개발 서버 포트 3000과의 충돌 방지).
+기본 포트는 `53333`입니다 (충돌 가능성 최소화를 위한 높은 포트 번호).
+
+**왜 53333?**
+- 일반적인 개발 서버들이 사용하지 않는 범위
+- 동적/사설 포트 범위 (49152-65535)에 속함
+- 다른 프로세스와 충돌 가능성이 매우 낮음
 
 **자동 포트 찾기:**
-- 3333 포트가 사용 중이면 자동으로 3334, 3335... 순서로 사용 가능한 포트를 찾습니다 (최대 10번 시도)
+- 53333 포트가 사용 중이면 자동으로 53334, 53335... 순서로 사용 가능한 포트를 찾습니다 (최대 10번 시도)
 - 실제 사용된 포트는 콘솔에 표시됩니다
 - Hook도 자동으로 실제 포트를 사용합니다
 
@@ -182,7 +187,7 @@ PORT=8080 claude-duo start
 **포트 충돌 해결:**
 ```bash
 # 포트 사용 중인 프로세스 확인 (macOS/Linux)
-lsof -i :3333
+lsof -i :53333
 
 # 프로세스 종료
 kill -9 <PID>
@@ -204,7 +209,7 @@ kill -9 <PID>
         "hooks": [
           {
             "type": "command",
-            "command": "HOOK_PORT=${ORCHESTRATION_PORT:-3333} && curl -X POST http://localhost:$HOOK_PORT/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+            "command": "HOOK_PORT=${ORCHESTRATION_PORT:-53333} && curl -X POST http://localhost:$HOOK_PORT/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
           }
         ]
       }
@@ -237,7 +242,8 @@ npm start
 ### 보안/배포 참고
 
 - HTTPS로 페이지가 제공될 때 WebSocket은 자동으로 `wss://`를 사용합니다.
-- 포트는 3333부터 자동으로 가용 포트를 탐색하며, 훅은 실제 사용 포트를(`ORCHESTRATION_PORT`) 따라갑니다.
+- 포트는 53333부터 자동으로 가용 포트를 탐색하며, 훅은 실제 사용 포트를(`ORCHESTRATION_PORT`) 따라갑니다.
+- 높은 포트 번호(53333)를 사용하여 일반적인 개발 서버와의 충돌을 방지합니다.
 
 ### 프로젝트 구조
 

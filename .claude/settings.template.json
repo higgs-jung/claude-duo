@@ -9,7 +9,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "HOOK_PORT=${ORCHESTRATION_PORT:-3333} && curl -X POST http://localhost:$HOOK_PORT/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
+            "command": "HOOK_PORT=${ORCHESTRATION_PORT:-53333} && curl -X POST http://localhost:$HOOK_PORT/hook -H 'Content-Type: application/json' -d '{\"type\":\"stop\",\"terminal_id\":\"'$TERMINAL_ID'\"}' &"
           }
         ]
       }

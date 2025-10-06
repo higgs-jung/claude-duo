@@ -181,7 +181,7 @@ function findAvailablePort(startPort, maxAttempts = 10) {
   });
 }
 
-const preferredPort = parseInt(process.env.PORT) || 3333;
+const preferredPort = parseInt(process.env.PORT) || 53333;
 
 findAvailablePort(preferredPort).then(PORT => {
   serverPort = PORT; // Store actual port globally
