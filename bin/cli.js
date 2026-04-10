@@ -20,47 +20,7 @@ if (command === 'init') {
 
 function init(force = false) {
   const cwd = process.cwd();
-  const claudeDir = path.join(cwd, '.claude');
-
-  // Create .claude directory if it doesn't exist
-  if (!fs.existsSync(claudeDir)) {
-    fs.mkdirSync(claudeDir, { recursive: true });
-    console.log('✓ Created .claude/ directory');
-  }
-
-  // Handle settings.local.json
-  const settingsTemplate = path.join(__dirname, '..', '.claude', 'settings.template.json');
-  const settingsTarget = path.join(claudeDir, 'settings.local.json');
-
-  if (fs.existsSync(settingsTarget)) {
-    if (force) {
-      // Force overwrite
-      fs.copyFileSync(settingsTemplate, settingsTarget);
-      console.log('✓ Updated .claude/settings.local.json (force overwrite)');
-    } else {
-      // Smart merge: only update Stop hook
-      try {
-        const existing = JSON.parse(fs.readFileSync(settingsTarget, 'utf8'));
-        const template = JSON.parse(fs.readFileSync(settingsTemplate, 'utf8'));
-
-        // Initialize hooks if not exists
-        if (!existing.hooks) existing.hooks = {};
-
-        // Update only Stop hook
-        existing.hooks.Stop = template.hooks.Stop;
-
-        fs.writeFileSync(settingsTarget, JSON.stringify(existing, null, 2));
-        console.log('✓ Updated .claude/settings.local.json (merged Stop hook)');
-      } catch (err) {
-        console.log(`⚠ Could not merge settings.local.json: ${err.message}`);
-        console.log('  Use --force to overwrite');
-      }
-    }
-  } else {
-    // Create new file
-    fs.copyFileSync(settingsTemplate, settingsTarget);
-    console.log('✓ Created .claude/settings.local.json');
-  }
+  ensureStopHook(cwd, { force, log: true });
 
   // Handle CLAUDE.md (project root, not .claude directory)
   const claudeMdSource = path.join(__dirname, '..', 'CLAUDE.md');
@@ -103,6 +63,68 @@ function init(force = false) {
   console.log('2. Run: claude-duo start');
 }
 
+function getTemplateSettings() {
+  const settingsTemplate = path.join(__dirname, '..', '.claude', 'settings.template.json');
+  return JSON.parse(fs.readFileSync(settingsTemplate, 'utf8'));
+}
+
+function ensureStopHook(cwd, { force = false, log = false } = {}) {
+  const claudeDir = path.join(cwd, '.claude');
+  const settingsTarget = path.join(claudeDir, 'settings.local.json');
+  const template = getTemplateSettings();
+  const hadSettings = fs.existsSync(settingsTarget);
+
+  if (!fs.existsSync(claudeDir)) {
+    fs.mkdirSync(claudeDir, { recursive: true });
+    if (log) {
+      console.log('✓ Created .claude/ directory');
+    }
+  }
+
+  if (!hadSettings || force) {
+    fs.writeFileSync(settingsTarget, JSON.stringify(template, null, 2));
+    if (log) {
+      console.log(force && hadSettings
+        ? '✓ Updated .claude/settings.local.json (force overwrite)'
+        : '✓ Created .claude/settings.local.json');
+    }
+    return { changed: true, created: !hadSettings };
+  }
+
+  try {
+    const existing = JSON.parse(fs.readFileSync(settingsTarget, 'utf8'));
+    const next = {
+      ...existing,
+      hooks: {
+        ...(existing.hooks || {}),
+        Stop: template.hooks.Stop
+      }
+    };
+
+    const existingSerialized = JSON.stringify(existing);
+    const nextSerialized = JSON.stringify(next);
+
+    if (existingSerialized !== nextSerialized) {
+      fs.writeFileSync(settingsTarget, JSON.stringify(next, null, 2));
+      if (log) {
+        console.log('✓ Updated .claude/settings.local.json (merged Stop hook)');
+      }
+      return { changed: true, created: false };
+    }
+
+    if (log) {
+      console.log('✓ .claude/settings.local.json already has the orchestration Stop hook');
+    }
+    return { changed: false, created: false };
+  } catch (err) {
+    if (log) {
+      console.log(`⚠ Could not merge settings.local.json: ${err.message}`);
+      console.log('  Use claude-duo init --force to overwrite');
+    }
+    return { changed: false, created: false, error: err };
+  }
+}
+
 function start() {
   const server = path.join(__dirname, '..', 'server.js');
   const preferredPort = process.env.PORT || 53333;
@@ -111,9 +133,14 @@ function start() {
   console.log(`Starting Claude Code Orchestration...`);
   console.log(`Working directory: ${cwd}`);
 
+  const hookResult = ensureStopHook(cwd, { log: true });
+  if (hookResult.error) {
+    console.log('⚠ Start will continue, but auto-pipeline may not work until .claude/settings.local.json is fixed');
+  }
+
   let actualPort = null;
 
-  const serverProcess = spawn('node', [server], {
+  const serverProcess = spawn(process.execPath, [server], {
     stdio: ['inherit', 'pipe', 'pipe'],
     env: { ...process.env, PORT: preferredPort, PROJECT_CWD: cwd }
   });
