@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const http = require('http');
 const WebSocket = require('ws');
 const pty = require('node-pty');
@@ -23,6 +24,48 @@ let serverPort = null;
 // Debounce hook requests to prevent duplicates
 const lastHookTime = {};
 const HOOK_DEBOUNCE_MS = 1000;
+
+function buildTerminalPath(basePath = '') {
+  const segments = [
+    '/opt/homebrew/bin',
+    '/usr/local/bin',
+    '/usr/bin',
+    '/bin',
+    '/usr/sbin',
+    '/sbin'
+  ];
+
+  if (basePath) {
+    segments.push(...basePath.split(':'));
+  }
+
+  return [...new Set(segments.filter(Boolean))].join(':');
+}
+
+function resolveShell() {
+  if (os.platform() === 'win32') {
+    return {
+      shell: 'powershell.exe',
+      args: []
+    };
+  }
+
+  const candidates = [
+    process.env.SHELL,
+    '/bin/zsh',
+    '/bin/bash',
+    'zsh',
+    'bash',
+    'sh'
+  ].filter(Boolean);
+
+  const shell = candidates.find(candidate => candidate.includes('/') ? fs.existsSync(candidate) : true) || 'sh';
+
+  return {
+    shell,
+    args: ['-l']
+  };
+}
 
 // Hook endpoint
 app.post('/hook', (req, res) => {
@@ -107,20 +150,34 @@ wss.on('connection', (ws) => {
 });
 
 function createTerminal(ws, id) {
-  const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+  const { shell, args } = resolveShell();
   const cwd = process.env.PROJECT_CWD || process.cwd();
+  const env = {
+    ...process.env,
+    PATH: buildTerminalPath(process.env.PATH),
+    TERMINAL_ID: id,
+    ORCHESTRATION_PORT: serverPort || 3333
+  };
 
-  const term = pty.spawn(shell, [], {
-    name: 'xterm-color',
-    cols: 80,
-    rows: 30,
-    cwd: cwd,
-    env: {
-      ...process.env,
-      TERMINAL_ID: id,
-      ORCHESTRATION_PORT: serverPort || 3333
-    }
-  });
+  let term;
+  try {
+    term = pty.spawn(shell, args, {
+      name: 'xterm-color',
+      cols: 80,
+      rows: 30,
+      cwd: cwd,
+      env
+    });
+  } catch (err) {
+    const message = `Failed to create terminal ${id}: ${err.message}\r\n`;
+    console.error(message.trim());
+    ws.send(JSON.stringify({
+      type: 'output',
+      id: id,
+      data: message
+    }));
+    return;
+  }
 
   terminals[id] = term;
 
@@ -140,7 +197,7 @@ function createTerminal(ws, id) {
     delete terminals[id];
   });
 
-  console.log(`Created terminal: ${id}`);
+  console.log(`Created terminal: ${id} (${shell})`);
 }
 
 // Find available port starting from preferred port
