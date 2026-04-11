@@ -103,6 +103,31 @@ function hasCommand(commandName) {
   return result.status === 0 || result.status === 1 || !result.error;
 }
 
+function resolveTmuxBinary() {
+  const candidates = [
+    process.env.TMUX_BINARY,
+    '/opt/homebrew/bin/tmux',
+    '/usr/local/bin/tmux',
+    '/usr/bin/tmux',
+    'tmux'
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (candidate.includes('/')) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+      continue;
+    }
+
+    if (hasCommand(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 function getTmuxInstallHint() {
   if (process.platform === 'darwin') {
     return 'Install tmux first: brew install tmux';
@@ -640,7 +665,12 @@ function extractLastOutput(buffer) {
 }
 
 function runTmux(args, options = {}) {
-  return execFileSync('tmux', args, {
+  const tmuxBinary = resolveTmuxBinary();
+  if (!tmuxBinary) {
+    throw new Error(getTmuxInstallHint());
+  }
+
+  return execFileSync(tmuxBinary, args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     ...options
@@ -648,7 +678,12 @@ function runTmux(args, options = {}) {
 }
 
 function tmuxHasSession(sessionName) {
-  const result = spawnSync('tmux', ['has-session', '-t', sessionName], {
+  const tmuxBinary = resolveTmuxBinary();
+  if (!tmuxBinary) {
+    return false;
+  }
+
+  const result = spawnSync(tmuxBinary, ['has-session', '-t', sessionName], {
     stdio: 'ignore'
   });
   return result.status === 0;
@@ -719,7 +754,8 @@ function spawnTmuxRelay(sessionName, port, paneA, paneB) {
 }
 
 async function startTmux(cwd, launchMode) {
-  if (!hasCommand('tmux')) {
+  const tmuxBinary = resolveTmuxBinary();
+  if (!tmuxBinary) {
     throw new Error(getTmuxInstallHint());
   }
 
@@ -729,6 +765,7 @@ async function startTmux(cwd, launchMode) {
 
   console.log('Starting Claude Code Orchestration in tmux mode...');
   console.log(`Working directory: ${cwd}`);
+  console.log(`tmux binary: ${tmuxBinary}`);
   if (launchMode.label) {
     console.log(`Claude launch mode: ${launchMode.label}`);
   }
@@ -747,7 +784,7 @@ async function startTmux(cwd, launchMode) {
   console.log(`tmux session: ${sessionName}`);
   console.log(`relay port: ${port}`);
 
-  const attach = spawnSync('tmux', ['attach-session', '-t', sessionName], {
+  const attach = spawnSync(tmuxBinary, ['attach-session', '-t', sessionName], {
     stdio: 'inherit'
   });
 
