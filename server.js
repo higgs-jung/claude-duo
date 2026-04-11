@@ -12,7 +12,13 @@ const wss = new WebSocket.Server({ server });
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  lastModified: false,
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+}));
 
 // Store terminal instances
 const terminals = {};
@@ -152,6 +158,7 @@ wss.on('connection', (ws) => {
 function createTerminal(ws, id) {
   const { shell, args } = resolveShell();
   const cwd = process.env.PROJECT_CWD || process.cwd();
+  const autoCommand = process.env.CLAUDE_DUO_AUTO_COMMAND || 'claude';
   const env = {
     ...process.env,
     PATH: buildTerminalPath(process.env.PATH),
@@ -180,6 +187,14 @@ function createTerminal(ws, id) {
   }
 
   terminals[id] = term;
+
+  if (autoCommand) {
+    setTimeout(() => {
+      if (terminals[id]) {
+        term.write(`${autoCommand}\r`);
+      }
+    }, 500);
+  }
 
   term.onData((data) => {
     ws.send(JSON.stringify({

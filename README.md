@@ -33,6 +33,9 @@ claude-duo start
 ```
 
 브라우저가 자동으로 열리고 두 개의 Claude Code 터미널이 실행됩니다.
+`claude-duo start`는 현재 디렉토리의 `Stop` hook이 없으면 자동으로 추가합니다.
+Claude Code CLI(`claude`)가 PATH에 있어야 각 터미널이 자동으로 시작됩니다.
+브라우저 없이 쓰고 싶다면 `claude-duo start tmux`로 tmux pane 2개 모드를 사용할 수 있습니다.
 
 ## 설치 방법
 
@@ -89,17 +92,65 @@ claude-duo start
 
 # 커스텀 포트
 PORT=8080 claude-duo start
+
+# Claude를 풀액세스 모드로 시작
+claude-duo start --full-access
+
+# Claude를 YOLO 모드로 시작
+claude-duo start yolo
+
+# 브라우저 없이 tmux pane 2개로 시작
+claude-duo start tmux
+
+# tmux pane 2개 + YOLO 모드
+claude-duo start tmux yolo
 ```
+
+실행 전에 현재 디렉토리의 `.claude/settings.local.json`을 확인하고, orchestration용 `Stop` hook이 없으면 자동으로 병합합니다.
+`--full-access`를 사용하면 각 터미널이 `claude --permission-mode bypassPermissions`로 시작됩니다.
+`yolo`를 사용하면 각 터미널이 `claude --dangerously-skip-permissions`로 시작됩니다.
+`tmux`를 사용하면 브라우저 대신 tmux 세션에 pane 2개를 만들고 같은 자동 전달 로직을 사용합니다.
+`tmux`가 설치되어 있지 않으면 설치 명령을 안내하고 종료합니다.
+
+### `claude-duo backup`
+
+현재 디렉토리의 orchestration 관련 파일을 백업합니다:
+
+- `.claude/settings.local.json`
+- `CLAUDE.md`
+
+```bash
+claude-duo backup
+```
+
+백업 파일은 `.claude-duo/backups/<timestamp>/` 아래에 저장됩니다.
+
+### `claude-duo uninstall`
+
+현재 디렉토리에서 orchestration 설정을 제거합니다:
+
+- `.claude/settings.local.json`의 `Stop` hook 제거
+- `CLAUDE.md`에 prepend된 orchestration 컨텍스트 제거
+
+```bash
+claude-duo uninstall
+```
+
+`uninstall`은 변경 전에 현재 상태를 `.claude-duo/backups/<timestamp>/`에 자동 백업합니다.
 
 ## 프로젝트 구조
 
 ```
 your-project/
+├── .claude-duo/
+│   └── backups/            # claude-duo backup / uninstall 자동 백업
 ├── .claude/
 │   └── settings.local.json  # Hook 설정 (claude-duo init으로 생성)
 ├── CLAUDE.md                # 협업 컨텍스트 (claude-duo init으로 생성)
 └── ... (your project files)
 ```
+
+tmux 모드는 현재 디렉토리를 기준으로 새 tmux 세션을 만들고, 각 pane에 Claude를 실행합니다.
 
 ## CLAUDE.md의 역할
 
@@ -182,6 +233,9 @@ claude-duo start
 **커스텀 포트로 변경:**
 ```bash
 PORT=8080 claude-duo start
+
+# tmux 모드에서도 동일
+PORT=8080 claude-duo start tmux
 ```
 
 **포트 충돌 해결:**
@@ -217,6 +271,8 @@ kill -9 <PID>
   }
 }
 ```
+
+이미 다른 설정이 들어 있는 경우에도 `claude-duo start`와 `claude-duo init`은 `Stop` hook만 병합합니다.
 
 ### 딜레이 조정
 
@@ -256,7 +312,7 @@ claude-duo/
 │   └── client.js           # WebSocket 클라이언트 + 자동 파이프라인
 ├── .claude/
 │   └── settings.template.json   # Hook 설정 템플릿
-├── CLAUDE.md               # 협업 컨텍스트 (init 시 복사됨)
+├── claude.md               # 협업 컨텍스트 템플릿 (init 시 CLAUDE.md로 복사)
 ├── server.js               # Express + WebSocket 서버
 └── package.json
 ```
@@ -283,6 +339,13 @@ claude-duo/
 ### 터미널이 다른 디렉토리에서 실행됨
 
 `claude-duo start`를 실행한 디렉토리가 터미널의 작업 디렉토리가 됩니다. 올바른 프로젝트 폴더에서 실행했는지 확인하세요.
+
+### tmux가 설치되어 있지 않음
+
+- macOS(Homebrew): `brew install tmux`
+- Ubuntu/Debian: `sudo apt install tmux`
+- Fedora: `sudo dnf install tmux`
+- Arch: `sudo pacman -S tmux`
 
 ## 업데이트
 

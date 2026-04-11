@@ -15,7 +15,7 @@
     "public/",
     "server.js",
     ".claude/settings.template.json",
-    "CLAUDE.md",
+    "claude.md",
     "README.md"
   ],
   "keywords": [

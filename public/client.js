@@ -220,12 +220,6 @@ function startTerminals() {
   document.getElementById('status-a').classList.add('running');
   document.getElementById('status-b').textContent = 'Running';
   document.getElementById('status-b').classList.add('running');
-
-  // Start Claude Code in both terminals
-  setTimeout(() => {
-    ws.send(JSON.stringify({ type: 'input', id: 'a', data: 'claude\r' }));
-    ws.send(JSON.stringify({ type: 'input', id: 'b', data: 'claude\r' }));
-  }, 500);
 }
 
 // Auto-start on connection
