@@ -33,14 +33,14 @@ if (command === 'init') {
 
 function printUsage() {
   console.log('Usage:');
-  console.log('  claude-duo init          - Initialize orchestration files in current directory');
-  console.log('  claude-duo init --force  - Force overwrite orchestration settings');
-  console.log('  claude-duo backup        - Backup current orchestration-related files');
-  console.log('  claude-duo uninstall     - Remove orchestration hook/context from current directory');
-  console.log('  claude-duo start         - Start orchestration server');
-  console.log('  claude-duo start tmux    - Run Claude Duo in a local tmux session');
-  console.log('  claude-duo start --full-access  - Launch Claude in bypass-permissions mode');
-  console.log('  claude-duo start yolo    - Launch Claude with --dangerously-skip-permissions');
+  console.log('  cduo init          - Initialize orchestration files in current directory');
+  console.log('  cduo init --force  - Force overwrite orchestration settings');
+  console.log('  cduo backup        - Backup current orchestration-related files');
+  console.log('  cduo uninstall     - Remove orchestration hook/context from current directory');
+  console.log('  cduo start         - Start orchestration server');
+  console.log('  cduo start tmux    - Run cduo in a local tmux session');
+  console.log('  cduo start --full-access  - Launch Claude in bypass-permissions mode');
+  console.log('  cduo start yolo    - Launch Claude with --dangerously-skip-permissions');
 }
 
 function resolveClaudeLaunchMode() {
@@ -165,7 +165,7 @@ function getProjectPaths(cwd) {
     claudeDir: path.join(cwd, '.claude'),
     settingsTarget: path.join(cwd, '.claude', 'settings.local.json'),
     claudeMdTarget: path.join(cwd, 'CLAUDE.md'),
-    backupRoot: path.join(cwd, '.claude-duo', 'backups')
+    backupRoot: path.join(cwd, '.cduo', 'backups')
   };
 }
 
@@ -352,7 +352,7 @@ function ensureStopHook(cwd, {
   if (inspection.error) {
     if (log) {
       console.log(`⚠ Could not merge settings.local.json: ${inspection.error.message}`);
-      console.log('  Use claude-duo init --force to overwrite');
+      console.log('  Use cduo init --force to overwrite');
     }
     return { changed: false, created: false, error: inspection.error };
   }
@@ -556,7 +556,7 @@ function init(force = false) {
   console.log('\n✅ Initialization complete!');
   console.log('\nNext steps:');
   console.log('1. Review .claude/settings.local.json and adjust if needed');
-  console.log('2. Run: claude-duo start');
+  console.log('2. Run: cduo start');
 }
 
 function backup() {
@@ -574,7 +574,7 @@ function backup() {
 function uninstall() {
   const cwd = process.cwd();
 
-  console.log('Removing Claude Duo orchestration settings...');
+  console.log('Removing cduo orchestration settings...');
   createBackup(cwd, {
     reason: 'before-uninstall',
     log: true
@@ -592,7 +592,7 @@ function uninstall() {
     return;
   }
 
-  console.log('✓ Claude Duo orchestration settings removed');
+  console.log('✓ cduo orchestration settings removed');
 }
 
 function stripAnsi(str) {
@@ -725,9 +725,9 @@ async function startTmux(cwd, launchMode) {
 
   const preferredPort = parseInt(process.env.PORT || '53333', 10);
   const port = await findAvailablePort(preferredPort);
-  const sessionName = `claude-duo-${Date.now().toString(36)}`;
+  const sessionName = `cduo-${Date.now().toString(36)}`;
 
-  console.log('Starting Claude Code Orchestration in tmux mode...');
+  console.log('Starting cduo in tmux mode...');
   console.log(`Working directory: ${cwd}`);
   if (launchMode.label) {
     console.log(`Claude launch mode: ${launchMode.label}`);
@@ -854,7 +854,7 @@ async function start() {
     return;
   }
 
-  console.log('Starting Claude Code Orchestration...');
+  console.log('Starting cduo...');
   console.log(`Working directory: ${cwd}`);
   if (launchMode.label) {
     console.log(`Claude launch mode: ${launchMode.label}`);
@@ -876,7 +876,7 @@ async function start() {
       ...process.env,
       PORT: preferredPort,
       PROJECT_CWD: cwd,
-      CLAUDE_DUO_AUTO_COMMAND: claudeLaunchCommand
+      CDUO_AUTO_COMMAND: claudeLaunchCommand
     }
   });
 

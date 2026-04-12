@@ -1,10 +1,10 @@
 {
-  "name": "claude-duo",
+  "name": "cduo",
   "version": "1.2.2",
   "description": "Dual Claude Code terminal orchestration tool for collaborative AI development",
   "main": "server.js",
   "bin": {
-    "claude-duo": "./bin/cli.js"
+    "cduo": "bin/cli.js"
   },
   "scripts": {
     "start": "node bin/cli.js start",
@@ -39,6 +39,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/higgs-jung/claude-duo.git"
+    "url": "git+https://github.com/higgs-jung/cduo.git"
   }
 }

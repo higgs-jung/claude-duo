@@ -158,7 +158,7 @@ wss.on('connection', (ws) => {
 function createTerminal(ws, id) {
   const { shell, args } = resolveShell();
   const cwd = process.env.PROJECT_CWD || process.cwd();
-  const autoCommand = process.env.CLAUDE_DUO_AUTO_COMMAND || 'claude';
+  const autoCommand = process.env.CDUO_AUTO_COMMAND || process.env.CLAUDE_DUO_AUTO_COMMAND || 'claude';
   const env = {
     ...process.env,
     PATH: buildTerminalPath(process.env.PATH),

@@ -1,4 +1,4 @@
-# Claude Code Orchestration
+# cduo
 
 두 개의 Claude Code 인스턴스를 동시에 실행하고 서로 협업할 수 있게 하는 웹 기반 터미널 오케스트레이션 도구입니다.
 
@@ -17,7 +17,7 @@
 ### 글로벌 설치
 
 ```bash
-npm install -g claude-duo
+npm install -g cduo
 ```
 
 ### 프로젝트에서 사용
@@ -26,37 +26,37 @@ npm install -g claude-duo
 cd /path/to/your-project
 
 # 1. 프로젝트 초기화 (.claude/ 설정 생성)
-claude-duo init
+cduo init
 
 # 2. 오케스트레이션 시작
-claude-duo start
+cduo start
 ```
 
 브라우저가 자동으로 열리고 두 개의 Claude Code 터미널이 실행됩니다.
-`claude-duo start`는 현재 디렉토리의 `Stop` hook이 없으면 자동으로 추가합니다.
+`cduo start`는 현재 디렉토리의 `Stop` hook이 없으면 자동으로 추가합니다.
 Claude Code CLI(`claude`)가 PATH에 있어야 각 터미널이 자동으로 시작됩니다.
-브라우저 없이 쓰고 싶다면 `claude-duo start tmux`로 tmux pane 2개 모드를 사용할 수 있습니다.
+브라우저 없이 쓰고 싶다면 `cduo start tmux`로 tmux pane 2개 모드를 사용할 수 있습니다.
 
 ## 설치 방법
 
 ### 방법 1: 글로벌 설치 (권장)
 
 ```bash
-npm install -g claude-duo
+npm install -g cduo
 ```
 
-어떤 프로젝트에서든 `claude-duo` 명령을 사용할 수 있습니다.
+어떤 프로젝트에서든 `cduo` 명령을 사용할 수 있습니다.
 
 ### 방법 2: 프로젝트 의존성
 
 ```bash
 cd /path/to/your-project
-npm install --save-dev claude-duo
+npm install --save-dev cduo
 
 # package.json에 스크립트 추가
 {
   "scripts": {
-    "orchestrate": "claude-duo start"
+    "orchestrate": "cduo start"
   }
 }
 
@@ -66,13 +66,13 @@ npm run orchestrate
 ### 방법 3: npx (설치 없이)
 
 ```bash
-npx claude-duo init
-npx claude-duo start
+npx cduo init
+npx cduo start
 ```
 
 ## 명령어
 
-### `claude-duo init`
+### `cduo init`
 
 현재 디렉토리에 설정 파일을 생성합니다:
 
@@ -80,30 +80,30 @@ npx claude-duo start
 - `CLAUDE.md` - 협업 모드 컨텍스트 (프로젝트 루트)
 
 ```bash
-claude-duo init
+cduo init
 ```
 
-### `claude-duo start`
+### `cduo start`
 
 현재 디렉토리를 작업 경로로 오케스트레이션 서버를 시작합니다:
 
 ```bash
-claude-duo start
+cduo start
 
 # 커스텀 포트
-PORT=8080 claude-duo start
+PORT=8080 cduo start
 
 # Claude를 풀액세스 모드로 시작
-claude-duo start --full-access
+cduo start --full-access
 
 # Claude를 YOLO 모드로 시작
-claude-duo start yolo
+cduo start yolo
 
 # 브라우저 없이 tmux pane 2개로 시작
-claude-duo start tmux
+cduo start tmux
 
 # tmux pane 2개 + YOLO 모드
-claude-duo start tmux yolo
+cduo start tmux yolo
 ```
 
 실행 전에 현재 디렉토리의 `.claude/settings.local.json`을 확인하고, orchestration용 `Stop` hook이 없으면 자동으로 병합합니다.
@@ -112,7 +112,7 @@ claude-duo start tmux yolo
 `tmux`를 사용하면 브라우저 대신 tmux 세션에 pane 2개를 만들고 같은 자동 전달 로직을 사용합니다.
 `tmux`가 설치되어 있지 않으면 설치 명령을 안내하고 종료합니다.
 
-### `claude-duo backup`
+### `cduo backup`
 
 현재 디렉토리의 orchestration 관련 파일을 백업합니다:
 
@@ -120,12 +120,12 @@ claude-duo start tmux yolo
 - `CLAUDE.md`
 
 ```bash
-claude-duo backup
+cduo backup
 ```
 
-백업 파일은 `.claude-duo/backups/<timestamp>/` 아래에 저장됩니다.
+백업 파일은 `.cduo/backups/<timestamp>/` 아래에 저장됩니다.
 
-### `claude-duo uninstall`
+### `cduo uninstall`
 
 현재 디렉토리에서 orchestration 설정을 제거합니다:
 
@@ -133,20 +133,20 @@ claude-duo backup
 - `CLAUDE.md`에 prepend된 orchestration 컨텍스트 제거
 
 ```bash
-claude-duo uninstall
+cduo uninstall
 ```
 
-`uninstall`은 변경 전에 현재 상태를 `.claude-duo/backups/<timestamp>/`에 자동 백업합니다.
+`uninstall`은 변경 전에 현재 상태를 `.cduo/backups/<timestamp>/`에 자동 백업합니다.
 
 ## 프로젝트 구조
 
 ```
 your-project/
-├── .claude-duo/
-│   └── backups/            # claude-duo backup / uninstall 자동 백업
+├── .cduo/
+│   └── backups/            # cduo backup / uninstall 자동 백업
 ├── .claude/
-│   └── settings.local.json  # Hook 설정 (claude-duo init으로 생성)
-├── CLAUDE.md                # 협업 컨텍스트 (claude-duo init으로 생성)
+│   └── settings.local.json  # Hook 설정 (cduo init으로 생성)
+├── CLAUDE.md                # 협업 컨텍스트 (cduo init으로 생성)
 └── ... (your project files)
 ```
 
@@ -154,7 +154,7 @@ tmux 모드는 현재 디렉토리를 기준으로 새 tmux 세션을 만들고,
 
 ## CLAUDE.md의 역할
 
-`claude-duo init`으로 생성되는 `CLAUDE.md` 파일은 Claude Code가 시작될 때 자동으로 읽는 시스템 프롬프트입니다. 이 파일은:
+`cduo init`으로 생성되는 `CLAUDE.md` 파일은 Claude Code가 시작될 때 자동으로 읽는 시스템 프롬프트입니다. 이 파일은:
 
 - 다른 Claude 인스턴스와 협업 중임을 알립니다
 - 간결하고 명확한 응답을 권장합니다
@@ -167,8 +167,8 @@ tmux 모드는 현재 디렉토리를 기준으로 새 tmux 세션을 만들고,
 
 ```bash
 cd ~/projects/my-app
-claude-duo init
-claude-duo start
+cduo init
+cduo start
 ```
 
 - **Terminal A**: 백엔드 API 개발
@@ -179,8 +179,8 @@ claude-duo start
 
 ```bash
 cd ~/projects/existing-project
-claude-duo init
-claude-duo start
+cduo init
+cduo start
 ```
 
 - **Terminal A**: 기능 구현
@@ -232,10 +232,10 @@ claude-duo start
 
 **커스텀 포트로 변경:**
 ```bash
-PORT=8080 claude-duo start
+PORT=8080 cduo start
 
 # tmux 모드에서도 동일
-PORT=8080 claude-duo start tmux
+PORT=8080 cduo start tmux
 ```
 
 **포트 충돌 해결:**
@@ -272,7 +272,7 @@ kill -9 <PID>
 }
 ```
 
-이미 다른 설정이 들어 있는 경우에도 `claude-duo start`와 `claude-duo init`은 `Stop` hook만 병합합니다.
+이미 다른 설정이 들어 있는 경우에도 `cduo start`와 `cduo init`은 `Stop` hook만 병합합니다.
 
 ### 딜레이 조정
 
@@ -289,8 +289,8 @@ setTimeout(() => {
 ### 로컬 개발
 
 ```bash
-git clone https://github.com/higgs-jung/claude-duo.git
-cd claude-duo
+git clone https://github.com/higgs-jung/cduo.git
+cd cduo
 npm install
 npm start
 ```
@@ -304,7 +304,7 @@ npm start
 ### 프로젝트 구조
 
 ```
-claude-duo/
+cduo/
 ├── bin/
 │   └── cli.js              # CLI 진입점 (init, start)
 ├── public/
@@ -338,7 +338,7 @@ claude-duo/
 
 ### 터미널이 다른 디렉토리에서 실행됨
 
-`claude-duo start`를 실행한 디렉토리가 터미널의 작업 디렉토리가 됩니다. 올바른 프로젝트 폴더에서 실행했는지 확인하세요.
+`cduo start`를 실행한 디렉토리가 터미널의 작업 디렉토리가 됩니다. 올바른 프로젝트 폴더에서 실행했는지 확인하세요.
 
 ### tmux가 설치되어 있지 않음
 
@@ -353,29 +353,29 @@ claude-duo/
 
 ```bash
 # 최신 버전으로 업데이트
-npm install -g claude-duo@latest
+npm install -g cduo@latest
 
 # 또는
-npm update -g claude-duo
+npm update -g cduo
 
 # 설치된 버전 확인
-npm list -g claude-duo
+npm list -g cduo
 ```
 
 ### 프로젝트 의존성 업데이트
 
 ```bash
 # package.json에 명시된 경우
-npm update claude-duo
+npm update cduo
 
 # 또는 최신 버전 강제 설치
-npm install claude-duo@latest
+npm install cduo@latest
 ```
 
 ### 주요 변경사항 확인
 
-- [GitHub Releases](https://github.com/higgs-jung/claude-duo/releases)
-- [CHANGELOG](https://github.com/higgs-jung/claude-duo/blob/main/CHANGELOG.md)
+- [GitHub Releases](https://github.com/higgs-jung/cduo/releases)
+- [CHANGELOG](https://github.com/higgs-jung/cduo/blob/main/CHANGELOG.md)
 
 ## 라이선스
 
